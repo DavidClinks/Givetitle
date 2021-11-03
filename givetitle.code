@@ -1,0 +1,71 @@
+else if (str.substr(0, 11) == "/givetitle ") {
+			string name = str.substr(11, cch.length() - 11 - 1);
+			if (name.size() < 3 || name.size() > 16) return;
+			toLowerCase(name);
+			try {
+				std::ifstream read_player("save/players/_" + name + ".json");
+				if (!read_player.is_open()) {
+					Player::OnConsoleMessage(peer, name + " does not exist!");
+					return;
+				}
+				json j;
+				read_player >> j;
+				read_player.close();
+				if (j["ltitleunlocked"]) {
+					j["ltitleunlocked"] = false;
+					j["ltitle"] = false;
+					for (ENetPeer* currentPeer = server->peers; currentPeer < &server->peers[server->peerCount]; ++currentPeer) {
+						if (currentPeer->state != ENET_PEER_STATE_CONNECTED || currentPeer->data == NULL) continue;
+						if (static_cast<PlayerInfo*>(currentPeer->data)->rawName == name) {
+							if (static_cast<PlayerInfo*>(currentPeer->data)->haveGrowId) {
+								Player::OnConsoleMessage(currentPeer, "`oWarning from `4System`o: your legendary title has been `@disabled!");
+								static_cast<PlayerInfo*>(currentPeer->data)->ltitle = false;
+								static_cast<PlayerInfo*>(currentPeer->data)->ltitleunlocked = false;
+								size_t pos;
+								while ((pos = static_cast<PlayerInfo*>(currentPeer->data)->displayName.find(" of Legend``")) != string::npos) {
+									static_cast<PlayerInfo*>(currentPeer->data)->displayName.replace(pos, 12, "");
+								} if (isWorldOwner(peer, world)) {
+									static_cast<PlayerInfo*>(currentPeer->data)->displayName = "`2" + static_cast<PlayerInfo*>(currentPeer->data)->displayName;
+									Player::OnNameChanged(peer, static_cast<PlayerInfo*>(currentPeer->data)->netID, "`2" + static_cast<PlayerInfo*>(currentPeer->data)->displayName);
+								} else {
+									Player::OnNameChanged(peer, static_cast<PlayerInfo*>(currentPeer->data)->netID, static_cast<PlayerInfo*>(currentPeer->data)->displayName);
+								}
+								LogAccountActivity(static_cast<PlayerInfo*>(peer->data)->rawName, static_cast<PlayerInfo*>(peer->data)->rawName, "Disabled legendary title for " + static_cast<PlayerInfo*>(currentPeer->data)->rawName);
+								break;
+							}
+						}
+					}
+					Player::OnConsoleMessage(peer, name + " `onow has legendary title `@disabled`o!");
+				} else {
+					j["ltitleunlocked"] = true;
+					j["ltitle"] = true;
+					for (ENetPeer* currentPeer = server->peers; currentPeer < &server->peers[server->peerCount]; ++currentPeer) {
+						if (currentPeer->state != ENET_PEER_STATE_CONNECTED || currentPeer->data == NULL) continue;
+						if (static_cast<PlayerInfo*>(currentPeer->data)->rawName == name) {
+							if (static_cast<PlayerInfo*>(currentPeer->data)->haveGrowId) {
+								Player::OnConsoleMessage(currentPeer, "`oWarning from `4System`o: your legendary title has been `^enabled!");
+								static_cast<PlayerInfo*>(currentPeer->data)->ltitle = true;
+								static_cast<PlayerInfo*>(currentPeer->data)->ltitleunlocked = true;
+								if (static_cast<PlayerInfo*>(currentPeer->data)->ltitle && static_cast<PlayerInfo*>(currentPeer->data)->ltitleunlocked && static_cast<PlayerInfo*>(currentPeer->data)->displayName.find(" of Legend``") == string::npos) {
+									static_cast<PlayerInfo*>(currentPeer->data)->displayName += " of Legend``";
+								} if (isWorldOwner(peer, world)) {
+									static_cast<PlayerInfo*>(currentPeer->data)->displayName = "`2" + static_cast<PlayerInfo*>(currentPeer->data)->displayName;
+									Player::OnNameChanged(peer, static_cast<PlayerInfo*>(currentPeer->data)->netID, "`2" + static_cast<PlayerInfo*>(currentPeer->data)->displayName);
+								} else {
+									Player::OnNameChanged(peer, static_cast<PlayerInfo*>(currentPeer->data)->netID, static_cast<PlayerInfo*>(currentPeer->data)->displayName);
+								}
+								LogAccountActivity(static_cast<PlayerInfo*>(peer->data)->rawName, static_cast<PlayerInfo*>(peer->data)->rawName, "Enabled legendary title for " + static_cast<PlayerInfo*>(currentPeer->data)->rawName);
+								break;
+							}
+						}
+					}
+					Player::OnConsoleMessage(peer, name + " `onow has legendary title `^enabled`o!");
+				}
+				ofstream write_player("save/players/_" + name + ".json");
+				write_player << j << std::endl;
+				write_player.close();
+			} catch (std::exception& e) {
+				std::cout << e.what() << std::endl;
+				return; 
+			}
+		}
